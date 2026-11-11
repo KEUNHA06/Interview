@@ -1,0 +1,6 @@
+name = "interview-trainer-api"
+main = "worker.js"
+compatibility_date = "2026-11-11"
+
+[vars]
+MODEL = "gpt-4o-mini"

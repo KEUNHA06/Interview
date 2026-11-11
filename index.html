@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17233b">
+<title>나의 AI 면접 트레이너</title>
+<style>
+:root{--navy:#17233b;--blue:#315c9b;--bg:#f4f6fa;--card:#fff;--muted:#667085;--line:#e4e8ef;--green:#18794e;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#202939;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;line-height:1.55}
+header{background:var(--navy);color:#fff;padding:22px max(18px,calc((100% - 980px)/2));}
+header h1{font-size:21px;margin:0 0 4px}header p{margin:0;color:#cbd5e1;font-size:13px}
+main{max-width:980px;margin:20px auto;padding:0 14px 50px;display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 2px 8px #15223808}
+h2{font-size:17px;margin:0 0 12px}.sub{font-size:13px;color:var(--muted);margin-top:-6px}
+label{display:block;font-weight:650;font-size:13px;margin:12px 0 6px}
+input[type=text],input[type=password],textarea,select{width:100%;border:1px solid #cfd6e1;border-radius:10px;padding:11px 12px;font:inherit;background:#fff;color:#202939}
+textarea{min-height:130px;resize:vertical}button{border:0;border-radius:10px;padding:11px 15px;background:var(--blue);color:#fff;font-weight:700;font-size:14px;cursor:pointer}
+button.secondary{background:#edf1f7;color:#24334d}button.danger{background:#fff0ee;color:var(--red)}button:disabled{opacity:.45;cursor:not-allowed}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:0 0 auto}.row .grow{flex:1 1 220px}
+.small{font-size:12px;color:var(--muted)}.notice{padding:11px 12px;border-radius:10px;background:#f0f5ff;color:#244574;font-size:13px}
+.warn{background:#fff7e8;color:#855500}.success{background:#ecfdf3;color:#12633e}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.tab{background:#edf1f7;color:#344054}.tab.active{background:var(--navy);color:#fff}
+.hidden{display:none!important}.pill{display:inline-block;padding:3px 9px;border-radius:99px;background:#edf1f7;font-size:11px;color:#344054;margin-right:5px}
+#question{font-size:19px;font-weight:750;line-height:1.5;margin:8px 0 14px}
+.scoregrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.score{background:#f6f8fb;border-radius:10px;padding:10px}.score b{display:block;font-size:20px;color:var(--navy)}.score span{font-size:11px;color:var(--muted)}
+.chatitem{padding:12px 0;border-bottom:1px solid var(--line)}.chatitem:last-child{border:0}.chatrole{font-size:11px;font-weight:800;color:var(--blue)}.chatbody{white-space:pre-wrap;margin-top:4px}
+footer{max-width:980px;margin:0 auto;padding:0 16px 30px;color:var(--muted);font-size:12px}
+@media(min-width:760px){main{grid-template-columns:1fr 1fr}.wide{grid-column:1/-1}}
+</style>
+</head>
+<body>
+<header><h1>나의 AI 면접 트레이너</h1><p>나의 실제 성과를 깊이 이해하고, 관리자 관점으로 설명하는 연습</p></header>
+<main>
+<section class="card wide">
+<h2>1. 기술서 입력</h2>
+<p class="sub">TXT 파일을 불러오거나 내용을 직접 붙여넣으세요. 원본은 이 브라우저에만 보관됩니다.</p>
+<div class="row">
+<input class="grow" id="file" type="file" accept=".txt,text/plain">
+<button class="secondary" id="loadSample">예시 불러오기</button>
+</div>
+<label for="doc">면접 기술서</label>
+<textarea id="doc" placeholder="본인이 수행한 업무, 문제 상황, 본인의 역할, 추진 과정, 성과 등을 입력하세요."></textarea>
+<div class="row">
+<button id="saveDoc">기술서 기기에 저장</button>
+<button class="secondary" id="clearDoc">비우기</button>
+<span class="small" id="docStatus" aria-live="polite"></span>
+</div>
+</section>
+
+<section class="card">
+<h2>2. AI 연결 설정</h2>
+<p class="sub">보안 서버 주소를 입력하세요. API 키는 이 화면에 입력하지 않습니다.</p>
+<label for="endpoint">보안 서버 주소 (Cloudflare Worker URL)</label>
+<input id="endpoint" type="text" placeholder="https://your-worker.your-subdomain.workers.dev">
+<div class="notice warn" style="margin-top:12px">기술서 일부가 AI 서비스로 전송됩니다. 전송 전 미리보기에서 내용을 확인하고 직접 승인해야 합니다.</div>
+<div class="row" style="margin-top:12px">
+<button id="saveSettings">연결 주소 저장</button><button class="secondary" id="testConnection">연결 확인</button>
+</div>
+<div id="connectionStatus" class="small" aria-live="polite"></div>
+</section>
+
+<section class="card">
+<h2>3. 면접 방식</h2>
+<label for="mode">질문 관점</label>
+<select id="mode"><option value="combined">기술서 집중 + 관리자 역량 연결</option><option value="deep">기술서 집중 탐구</option><option value="leader">관리자 역량 연결</option></select>
+<label for="difficulty">질문 강도</label>
+<select id="difficulty"><option value="normal">일반 면접</option><option value="deep">심층 검증</option><option value="pressure">압박 질문 포함</option></select>
+<label for="answerMode">답변 방식</label>
+<select id="answerMode"><option value="text">키보드 입력</option><option value="voice">음성 입력</option><option value="both">키보드 + 음성</option></select>
+<div class="row" style="margin-top:14px"><button id="start">새 면접 시작</button><button class="secondary" id="resetSession">현재 면접 초기화</button></div>
+</section>
+
+<section class="card">
+<h2>4. 면접 진행</h2>
+<div class="row"><span class="pill" id="turn">대기 중</span><span class="pill" id="modeLabel">기술서 기반</span></div>
+<div id="question">기술서를 입력하고 ‘새 면접 시작’을 눌러주세요.</div>
+<label for="answer">나의 답변</label>
+<textarea id="answer" placeholder="면접관의 질문에 답변해 보세요."></textarea>
+<div class="row">
+<button id="mic" class="secondary">🎙 음성 입력</button>
+<button id="submitAnswer">답변 제출 및 평가</button>
+<button id="nextQuestion" class="secondary" disabled>다음 질문</button>
+</div>
+<p id="voiceStatus" class="small" aria-live="polite"></p>
+</section>
+
+<section class="card">
+<h2>5. 답변 피드백</h2>
+<div id="feedback" class="small">답변을 제출하면 강점, 보완점, 관리자 역량 관점의 피드백이 표시됩니다.</div>
+<div id="scores" class="scoregrid" style="margin-top:12px"></div>
+</section>
+
+<section class="card wide">
+<div class="row" style="justify-content:space-between">
+<h2 style="margin:0">6. 면접 기록</h2>
+<div class="row"><button class="secondary" id="export">기록 내보내기</button><button class="danger" id="clearHistory">기록 삭제</button></div>
+</div>
+<div id="history" style="margin-top:8px"><p class="small">아직 기록이 없습니다.</p></div>
+</section>
+</main>
+<footer>개인 학습용 프로토타입 · 기술서와 기록은 브라우저 로컬 저장소에 저장됩니다. 브라우저 데이터 삭제 또는 다른 기기 사용 시 기록이 공유되지 않습니다. AI 기능은 별도 보안 서버 연결이 필요합니다.</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const KEYS={doc:"interviewTrainer_doc_v1",endpoint:"interviewTrainer_endpoint_v1",history:"interviewTrainer_history_v1"};
+let currentQuestion="", turnNo=0, pendingNext=false, history=[];
+const sample=`[업무 성과: 임차료 예산 관리 체계화]
+2024년에 임차료 예산 부족으로 기금 변경을 한 사례가 있었다. 이를 계기로 연초부터 임차료 집행 현황을 직접 관리하기 시작했다. 관련 부서와 지속적으로 논의하며 예산 부족 가능성을 점검했고, 관리 방법을 매뉴얼에 남겨 후임자도 같은 절차를 이어갈 수 있도록 했다. 그 결과 담당자가 명확하지 않았던 업무가 지속적으로 관리되는 업무 루틴으로 정착했다.
+
+[업무 성과: e음감사 개선]
+매월 연금업무시스템 처리내역을 점검하고 착오사항을 지사에 안내하는 체계를 운영했다. 기존에는 정기자료 처리로 인식되던 업무를 점검 결과와 연계해 개선 필요성을 논의하고, 반복되는 문제는 업무기준 부서와 협의해 제도·지침 개선으로 연결하고자 했다.`;
+function getEndpoint(){return localStorage.getItem(KEYS.endpoint)||""}
+function setStatus(id,msg,cls=""){const el=$(id);el.textContent=msg;el.className="small "+cls}
+function docText(){return $("doc").value.trim()}
+function endpoint(){return getEndpoint().trim().replace(/\/+$/,"")}
+function saveHistory(){localStorage.setItem(KEYS.history,JSON.stringify(history));renderHistory()}
+function renderHistory(){
+ const box=$("history"); if(!history.length){box.innerHTML='<p class="small">아직 기록이 없습니다.</p>';return}
+ box.innerHTML=history.slice().reverse().map((h,i)=>`<div class="chatitem"><div class="chatrole">${h.role==="질문"?"면접관":"나의 답변"} · ${h.time}</div><div class="chatbody"></div></div>`).join("");
+ [...box.querySelectorAll(".chatbody")].forEach((el,i)=>el.textContent=history.slice().reverse()[i].text);
+}
+async function api(action,payload={}){
+ const url=endpoint(); if(!url)throw new Error("먼저 보안 서버 주소를 저장하세요.");
+ const res=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action,...payload})});
+ const data=await res.json().catch(()=>({error:"서버 응답을 읽을 수 없습니다."}));
+ if(!res.ok)throw new Error(data.error||`서버 오류 (${res.status})`);
+ return data;
+}
+function consentPreview(action,payload){
+ const text=payload.document||payload.answer||"";
+ const preview=text.length>1400?text.slice(0,1400)+"\n\n…(이하 생략)":text;
+ return window.confirm(`AI 서비스로 다음 내용이 전송됩니다.\n\n요청 종류: ${action}\n\n--- 전송 내용 미리보기 ---\n${preview}\n\n전송에 동의하면 확인을 누르세요.`);
+}
+$("file").addEventListener("change",async e=>{
+ const f=e.target.files[0];if(!f)return;
+ if(f.size>2*1024*1024){alert("TXT 파일은 2MB 이하로 선택해 주세요.");return}
+ $("doc").value=await f.text();setStatus("docStatus",`${f.name} 불러옴`);
+});
+$("loadSample").onclick=()=>{$("doc").value=sample;setStatus("docStatus","예시 내용이 입력되었습니다.")};
+$("saveDoc").onclick=()=>{localStorage.setItem(KEYS.doc,docText());setStatus("docStatus","이 기기에 저장했습니다.","success")};
+$("clearDoc").onclick=()=>{$("doc").value="";localStorage.removeItem(KEYS.doc);setStatus("docStatus","기술서를 비웠습니다.")};
+$("saveSettings").onclick=()=>{localStorage.setItem(KEYS.endpoint,$("endpoint").value.trim());setStatus("connectionStatus","연결 주소를 이 기기에 저장했습니다.","success")};
+$("testConnection").onclick=async()=>{try{setStatus("connectionStatus","연결 확인 중…");const d=await api("health");setStatus("connectionStatus",d.message||"서버 연결 성공","success")}catch(e){setStatus("connectionStatus",e.message,"")}};
+$("start").onclick=async()=>{
+ if(docText().length<40){alert("면접 기술서를 40자 이상 입력해 주세요.");return}
+ if(!endpoint()){alert("먼저 보안 서버 주소를 설정해 주세요.");return}
+ if(!consentPreview("첫 질문 생성",{document:docText()}))return;
+ history=[];turnNo=0;saveHistory();$("answer").value="";$("feedback").textContent="질문을 생성하고 있습니다…";$("scores").innerHTML="";
+ try{const d=await api("start",{document:docText(),mode:$("mode").value,difficulty:$("difficulty").value});
+ currentQuestion=d.question;turnNo=1;showQuestion();history.push({role:"질문",text:currentQuestion,time:new Date().toLocaleTimeString()});saveHistory();$("feedback").textContent="답변을 입력해 주세요."}
+ catch(e){$("feedback").textContent="오류: "+e.message}
+};
+function showQuestion(){$("question").textContent=currentQuestion;$("turn").textContent=`질문 ${turnNo}`;$("modeLabel").textContent=$("mode").selectedOptions[0].text;$("nextQuestion").disabled=true}
+$("submitAnswer").onclick=async()=>{
+ const ans=$("answer").value.trim();if(!currentQuestion){alert("먼저 면접을 시작해 주세요.");return}if(!ans){alert("답변을 입력해 주세요.");return}
+ const payload={document:docText(),question:currentQuestion,answer:ans,mode:$("mode").value,difficulty:$("difficulty").value,turn:turnNo};
+ if(!consentPreview("답변 평가 및 다음 질문 생성",payload))return;
+ $("submitAnswer").disabled=true;$("feedback").textContent="답변을 평가하고 다음 질문을 준비하고 있습니다…";
+ try{
+  const d=await api("evaluate",{...payload,generateNext:true});
+  history.push({role:"답변",text:ans,time:new Date().toLocaleTimeString()});
+  history.push({role:"질문",text:"[피드백] "+(d.feedback?.summary||"평가 완료"),time:new Date().toLocaleTimeString()});
+  saveHistory();renderFeedback(d.feedback||{});
+  currentQuestion=d.nextQuestion||"면접을 마쳤습니다. 수고하셨습니다.";pendingNext=true;$("nextQuestion").disabled=false;
+ }catch(e){$("feedback").textContent="오류: "+e.message}
+ finally{$("submitAnswer").disabled=false}
+};
+function renderFeedback(f){
+ const parts=[];if(f.summary)parts.push(`<p><b>총평</b><br>${escapeHtml(f.summary)}</p>`);
+ if(f.strengths?.length)parts.push(`<p><b>잘한 점</b><br>${f.strengths.map(escapeHtml).join("<br>")}</p>`);
+ if(f.improvements?.length)parts.push(`<p><b>보완할 점</b><br>${f.improvements.map(escapeHtml).join("<br>")}</p>`);
+ if(f.sampleAnswer)parts.push(`<p><b>답변 구성 제안</b><br>${escapeHtml(f.sampleAnswer)}</p>`);
+ $("feedback").innerHTML=parts.join("")||"평가 결과가 없습니다.";
+ const labels=[["사실성","factuality"],["주도성","ownership"],["논리성","logic"],["관리자 역량","leadership"],["설득력","persuasiveness"],["전달력","clarity"]];
+ $("scores").innerHTML=labels.map(([l,k])=>`<div class="score"><b>${Number(f.scores?.[k]??0)}/5</b><span>${l}</span></div>`).join("");
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("nextQuestion").onclick=()=>{if(!pendingNext)return;turnNo++;currentQuestion=currentQuestion;$("answer").value="";showQuestion();$("feedback").textContent="다음 질문에 답변해 주세요.";pendingNext=false;history.push({role:"질문",text:currentQuestion,time:new Date().toLocaleTimeString()});saveHistory()};
+$("resetSession").onclick=()=>{currentQuestion="";turnNo=0;pendingNext=false;$("question").textContent="기술서를 입력하고 ‘새 면접 시작’을 눌러주세요.";$("turn").textContent="대기 중";$("answer").value="";$("feedback").textContent="새 면접을 시작할 수 있습니다.";$("scores").innerHTML=""};
+$("mic").onclick=()=>{
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$("voiceStatus").textContent="이 브라우저는 음성 인식을 지원하지 않습니다. PC Chrome 또는 지원되는 모바일 브라우저를 이용해 주세요.";return}
+ const rec=new SR();rec.lang="ko-KR";rec.interimResults=true;rec.continuous=true;
+ $("voiceStatus").textContent="듣고 있습니다. 말씀하신 뒤 음성 입력 버튼을 다시 눌러 종료하세요.";
+ let finalText="";
+ rec.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){if(e.results[i].isFinal)finalText+=e.results[i][0].transcript;else interim+=e.results[i][0].transcript}$("answer").value=( $("answer").value+" "+finalText+" "+interim).trim()};
+ rec.onerror=e=>$("voiceStatus").textContent="음성 인식 오류: "+e.error;
+ rec.onend=()=>$("voiceStatus").textContent="음성 입력이 종료되었습니다.";
+ if(window._recognition){window._recognition.stop();window._recognition=null}else{window._recognition=rec;rec.start();$("mic").textContent="■ 음성 입력 종료"}
+};
+$("export").onclick=()=>{const blob=new Blob([JSON.stringify(history,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="면접연습기록.json";a.click();URL.revokeObjectURL(a.href)};
+$("clearHistory").onclick=()=>{if(confirm("면접 기록을 모두 삭제할까요?")){history=[];saveHistory()}};
+$("endpoint").value=getEndpoint();$("doc").value=localStorage.getItem(KEYS.doc)||"";
+try{history=JSON.parse(localStorage.getItem(KEYS.history)||"[]")}catch{history=[]}renderHistory();
+</script>
+</body></html>
